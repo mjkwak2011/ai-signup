@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>교육 신청</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif; background: #f5f5f7; color: #1a1a1a; min-height: 100vh; }
+  .container { max-width: 480px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+  .logo { text-align: center; margin-bottom: 2rem; }
+  .logo h1 { font-size: 22px; font-weight: 600; color: #1a1a1a; }
+  .logo p { font-size: 14px; color: #666; margin-top: 4px; }
+  .page { display: none; }
+  .page.active { display: block; }
+  .card { background: #fff; border-radius: 16px; padding: 1.5rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .section-label { font-size: 12px; font-weight: 600; color: #888; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 0.75rem; }
+  .date-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1rem; }
+  .date-card { border: 1.5px solid #e0e0e0; border-radius: 12px; padding: 1rem; cursor: pointer; transition: all 0.15s; background: #fff; }
+  .date-card:hover:not(.disabled) { border-color: #534AB7; background: #f4f3fe; }
+  .date-card.selected { border: 2px solid #534AB7; background: #f0effe; }
+  .date-card.disabled { opacity: 0.45; cursor: not-allowed; background: #fafafa; }
+  .date-card .d-label { font-size: 15px; font-weight: 600; color: #1a1a1a; }
+  .date-card .d-time { font-size: 12px; color: #888; margin-top: 3px; }
+  .date-card .d-count { font-size: 12px; color: #555; margin-top: 8px; }
+  .progress-bar { height: 4px; background: #ebebeb; border-radius: 10px; overflow: hidden; margin-top: 6px; }
+  .progress-fill { height: 100%; border-radius: 10px; background: #534AB7; transition: width 0.3s; }
+  .progress-fill.full { background: #e24b4a; }
+  .pill { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; margin-top: 6px; font-weight: 500; }
+  .pill-green { background: #e6f7f1; color: #0f6e56; }
+  .pill-red { background: #fceaea; color: #a32d2d; }
+  .form-group { margin-bottom: 1rem; }
+  .form-group label { display: block; font-size: 13px; color: #555; margin-bottom: 6px; font-weight: 500; }
+  .form-group input { width: 100%; padding: 10px 14px; font-size: 15px; border: 1.5px solid #e0e0e0; border-radius: 10px; background: #fafafa; color: #1a1a1a; outline: none; transition: border-color 0.15s; }
+  .form-group input:focus { border-color: #534AB7; background: #fff; }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 12px 20px; font-size: 15px; font-weight: 600; border: none; border-radius: 12px; cursor: pointer; width: 100%; transition: all 0.15s; }
+  .btn-primary { background: #534AB7; color: #fff; }
+  .btn-primary:hover { background: #3c3489; }
+  .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn-outline { background: #fff; color: #1a1a1a; border: 1.5px solid #e0e0e0; }
+  .btn-outline:hover { background: #f5f5f7; }
+  .btn-green { background: #1D9E75; color: #fff; }
+  .btn-green:hover { background: #0f6e56; }
+
+  /* 팝업 */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; align-items: center; justify-content: center; padding: 1rem; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #fff; border-radius: 20px; padding: 1.5rem; width: 100%; max-width: 360px; }
+  .modal-title { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+  .modal-sub { font-size: 13px; color: #888; margin-bottom: 1rem; }
+  .modal-info { background: #f5f5f7; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; }
+  .modal-info .row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; }
+  .modal-info .row .key { color: #888; }
+  .modal-info .row .val { font-weight: 600; color: #1a1a1a; }
+  .modal-warn { background: #fceaea; border-radius: 10px; padding: 10px 12px; margin-bottom: 1rem; font-size: 13px; color: #a32d2d; line-height: 1.5; }
+  .modal-btns { display: flex; gap: 8px; }
+  .modal-btns .btn { flex: 1; }
+
+  /* 성공 */
+  .success-box { text-align: center; padding: 2.5rem 1rem; }
+  .success-icon { font-size: 56px; margin-bottom: 1rem; }
+  .success-box h2 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+  .success-box p { font-size: 14px; color: #666; margin-bottom: 1.5rem; line-height: 1.6; }
+
+  /* 관리자 */
+  .nav-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+  .nav-title { font-size: 20px; font-weight: 600; }
+  .link-btn { font-size: 13px; color: #534AB7; background: none; border: none; cursor: pointer; font-weight: 500; }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 1rem; }
+  .stat-card { background: #fff; border-radius: 12px; padding: 0.75rem; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
+  .stat-val { font-size: 22px; font-weight: 700; color: #1a1a1a; }
+  .stat-label { font-size: 11px; color: #888; margin-top: 2px; }
+  .tab-bar { display: flex; gap: 6px; margin-bottom: 1rem; flex-wrap: wrap; }
+  .tab { padding: 6px 14px; font-size: 13px; border: 1.5px solid #e0e0e0; border-radius: 20px; cursor: pointer; background: #fff; color: #555; font-weight: 500; }
+  .tab.active { background: #534AB7; color: #fff; border-color: #534AB7; }
+  .search-input { width: 100%; padding: 10px 14px; font-size: 14px; border: 1.5px solid #e0e0e0; border-radius: 10px; background: #fafafa; color: #1a1a1a; outline: none; margin-bottom: 1rem; }
+  .search-input:focus { border-color: #534AB7; }
+  .list-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+  .list-item:last-child { border-bottom: none; }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; background: #f0effe; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #534AB7; flex-shrink: 0; }
+  .badge { font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 500; }
+  .badge-purple { background: #f0effe; color: #3c3489; }
+  .badge-teal { background: #e1f5ee; color: #0f6e56; }
+  .empty-msg { text-align: center; padding: 2rem; font-size: 14px; color: #aaa; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="logo">
+    <h1>교육 신청</h1>
+    <p>희망 일정을 선택하고 신청해주세요</p>
+  </div>
+
+  <!-- 신청 페이지 -->
+  <div id="page-signup" class="page active">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:0.75rem;">
+      <button class="link-btn" onclick="showAdmin()">관리자 →</button>
+    </div>
+    <div class="card">
+      <div class="section-label">일정 선택</div>
+      <div class="date-grid" id="date-grid"></div>
+    </div>
+    <div class="card">
+      <div class="section-label">신청 정보</div>
+      <div class="form-group">
+        <label>이름</label>
+        <input type="text" id="input-name" placeholder="홍길동" oninput="checkSubmit()" />
+      </div>
+      <div class="form-group" style="margin-bottom:1.25rem;">
+        <label>부서</label>
+        <input type="text" id="input-dept" placeholder="개발팀" oninput="checkSubmit()" />
+      </div>
+      <button class="btn btn-primary" id="submit-btn" onclick="openModal()" disabled>신청하기</button>
+    </div>
+  </div>
+
+  <!-- 완료 페이지 -->
+  <div id="page-success" class="page">
+    <div class="card success-box">
+      <div class="success-icon">✅</div>
+      <h2>신청 완료!</h2>
+      <p id="success-msg"></p>
+      <button class="btn btn-outline" onclick="showPage('page-signup')">처음으로</button>
+    </div>
+  </div>
+
+  <!-- 관리자 페이지 -->
+  <div id="page-admin" class="page">
+    <div class="nav-row">
+      <div class="nav-title">신청 현황</div>
+      <button class="link-btn" onclick="showPage('page-signup')">← 신청 폼</button>
+    </div>
+    <div class="stat-grid" id="stat-grid"></div>
+    <div class="tab-bar" id="admin-tabs"></div>
+    <input class="search-input" type="text" id="search-input" placeholder="이름 또는 부서 검색..." oninput="renderAdminList()" />
+    <div class="card" style="padding:0.5rem 1.25rem;margin-bottom:1rem;">
+      <div id="admin-list"></div>
+    </div>
+    <button class="btn btn-green" onclick="exportExcel()">
+      📊 엑셀로 내보내기 (.xlsx)
+    </button>
+  </div>
+</div>
+
+<!-- 확인 팝업 -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-title">신청 전 확인해주세요</div>
+    <div class="modal-sub">아래 정보로 교육을 신청합니다.</div>
+    <div class="modal-info">
+      <div class="row"><span class="key">이름</span><span class="val" id="m-name"></span></div>
+      <div class="row"><span class="key">부서</span><span class="val" id="m-dept"></span></div>
+      <div class="row"><span class="key">교육일</span><span class="val" id="m-date"></span></div>
+      <div class="row"><span class="key">시간</span><span class="val" id="m-time"></span></div>
+    </div>
+    <div class="modal-warn">
+      ⚠️ 신청 후 날짜 변경이 불가합니다. 변경이 필요할 경우 담당자에게 문의해주세요.
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="closeModal()">취소</button>
+      <button class="btn btn-primary" onclick="confirmSignup()">신청 확인</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DATES = [
+  { id: 'A', label: '6월 12일 (금)', time: '14:00 – 17:00 (3시간)', max: 22 },
+  { id: 'B', label: '6월 16일 (목)', time: '14:00 – 17:00 (3시간)', max: 22 }
+];
+
+let signups = [];
+try { signups = JSON.parse(localStorage.getItem('edu_signups') || '[]'); } catch(e) {}
+let selectedDate = null;
+let adminTab = 'A';
+
+function save() { try { localStorage.setItem('edu_signups', JSON.stringify(signups)); } catch(e) {} }
+function countFor(id) { return signups.filter(s => s.date === id).length; }
+
+function renderDates() {
+  document.getElementById('date-grid').innerHTML = DATES.map(d => {
+    const count = countFor(d.id);
+    const full = count >= d.max;
+    const pct = Math.min(100, Math.round(count / d.max * 100));
+    const sel = selectedDate === d.id;
+    return `<div class="date-card ${full?'disabled':''} ${sel?'selected':''}" onclick="selectDate('${d.id}')">
+      <div class="d-label">${d.label}</div>
+      <div class="d-time">🕒 ${d.time}</div>
+      <div class="d-count">${count} / ${d.max}명</div>
+      <div class="progress-bar"><div class="progress-fill ${full?'full':''}" style="width:${pct}%"></div></div>
+      ${full ? '<span class="pill pill-red">마감</span>' : `<span class="pill pill-green">잔여 ${d.max-count}명</span>`}
+    </div>`;
+  }).join('');
+}
+
+function selectDate(id) {
+  const d = DATES.find(x => x.id === id);
+  if (countFor(id) >= d.max) return;
+  selectedDate = id;
+  renderDates();
+  checkSubmit();
+}
+
+function checkSubmit() {
+  const name = document.getElementById('input-name').value.trim();
+  const dept = document.getElementById('input-dept').value.trim();
+  document.getElementById('submit-btn').disabled = !(name && dept && selectedDate);
+}
+
+function openModal() {
+  const name = document.getElementById('input-name').value.trim();
+  const dept = document.getElementById('input-dept').value.trim();
+  const d = DATES.find(x => x.id === selectedDate);
+  document.getElementById('m-name').textContent = name;
+  document.getElementById('m-dept').textContent = dept;
+  document.getElementById('m-date').textContent = d.label;
+  document.getElementById('m-time').textContent = d.time;
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+
+function confirmSignup() {
+  const name = document.getElementById('input-name').value.trim();
+  const dept = document.getElementById('input-dept').value.trim();
+  const d = DATES.find(x => x.id === selectedDate);
+  closeModal();
+  if (countFor(selectedDate) >= d.max) { alert('해당 날짜는 이미 마감되었습니다.'); return; }
+  if (signups.find(s => s.name === name && s.dept === dept)) { alert('이미 신청하셨습니다.'); return; }
+  signups.push({ name, dept, date: selectedDate, time: new Date().toLocaleString('ko-KR') });
+  save();
+  document.getElementById('success-msg').textContent = `${name}님 (${dept}) — ${d.label} ${d.time} 신청이 완료되었습니다.`;
+  document.getElementById('input-name').value = '';
+  document.getElementById('input-dept').value = '';
+  selectedDate = null;
+  showPage('page-success');
+}
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id === 'page-signup') renderDates();
+  if (id === 'page-admin') renderAdmin();
+}
+
+function showAdmin() { showPage('page-admin'); }
+
+function renderAdmin() {
+  const a = countFor('A'), b = countFor('B');
+  document.getElementById('stat-grid').innerHTML = `
+    <div class="stat-card"><div class="stat-val">${signups.length}</div><div class="stat-label">전체 신청</div></div>
+    <div class="stat-card"><div class="stat-val">${a}<span style="font-size:12px;color:#aaa"> / 22</span></div><div class="stat-label">6/12 (금)</div></div>
+    <div class="stat-card"><div class="stat-val">${b}<span style="font-size:12px;color:#aaa"> / 22</span></div><div class="stat-label">6/16 (목)</div></div>
+  `;
+  document.getElementById('admin-tabs').innerHTML =
+    DATES.map(d => `<div class="tab ${adminTab===d.id?'active':''}" onclick="setTab('${d.id}')">${d.label} (${countFor(d.id)}명)</div>`).join('') +
+    `<div class="tab ${adminTab==='all'?'active':''}" onclick="setTab('all')">전체</div>`;
+  renderAdminList();
+}
+
+function setTab(id) { adminTab = id; renderAdmin(); }
+
+function renderAdminList() {
+  const q = (document.getElementById('search-input')?.value || '').trim().toLowerCase();
+  let list = adminTab === 'all' ? signups : signups.filter(s => s.date === adminTab);
+  if (q) list = list.filter(s => s.name.includes(q) || s.dept.toLowerCase().includes(q));
+  const el = document.getElementById('admin-list');
+  if (!list.length) { el.innerHTML = '<div class="empty-msg">신청자가 없습니다.</div>'; return; }
+  el.innerHTML = list.map(s => {
+    const d = DATES.find(x => x.id === s.date);
+    return `<div class="list-item">
+      <div class="avatar">${s.name.slice(-2)}</div>
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:14px">${s.name}</div>
+        <div style="font-size:12px;color:#888">${s.dept}</div>
+      </div>
+      <span class="badge ${s.date==='A'?'badge-purple':'badge-teal'}">${d.label}</span>
+    </div>`;
+  }).join('');
+}
+
+function exportExcel() {
+  if (!window.XLSX) { alert('라이브러리 로딩 중입니다. 잠시 후 다시 시도해주세요.'); return; }
+  const wb = XLSX.utils.book_new();
+  DATES.forEach(d => {
+    const rows = signups.filter(s => s.date === d.id);
+    const data = [
+      ['번호', '이름', '부서', '교육일', '시간', '신청일시'],
+      ...rows.map((s, i) => [i+1, s.name, s.dept, d.label, d.time, s.time])
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = [{wch:6},{wch:12},{wch:16},{wch:16},{wch:22},{wch:22}];
+    XLSX.utils.book_append_sheet(wb, ws, d.label.replace('월 ','월').replace('일 ','일'));
+  });
+  const allData = [
+    ['번호', '이름', '부서', '교육일', '시간', '신청일시'],
+    ...signups.map((s,i) => { const d = DATES.find(x=>x.id===s.date); return [i+1,s.name,s.dept,d.label,d.time,s.time]; })
+  ];
+  const wsAll = XLSX.utils.aoa_to_sheet(allData);
+  wsAll['!cols'] = [{wch:6},{wch:12},{wch:16},{wch:16},{wch:22},{wch:22}];
+  XLSX.utils.book_append_sheet(wb, wsAll, '전체');
+  XLSX.writeFile(wb, '교육신청현황.xlsx');
+}
+
+renderDates();
+</script>
+</body>
+</html>
