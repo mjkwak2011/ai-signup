@@ -253,7 +253,7 @@ function renderAdmin() {
   document.getElementById('stat-grid').innerHTML = `
     <div class="stat-card"><div class="stat-val">${signups.length}</div><div class="stat-label">전체 신청</div></div>
     <div class="stat-card"><div class="stat-val">${a}<span style="font-size:12px;color:#aaa"> / 22</span></div><div class="stat-label">6/12 (금)</div></div>
-    <div class="stat-card"><div class="stat-val">${b}<span style="font-size:12px;color:#aaa"> / 22</span></div><div class="stat-label">6/16 (목)</div></div>
+    <div class="stat-card"><div class="stat-val">${b}<span style="font-size:12px;color:#aaa"> / 22</span></div><div class="stat-label">6/16 (화)</div></div>
   `;
   document.getElementById('admin-tabs').innerHTML =
     DATES.map(d => `<div class="tab ${adminTab===d.id?'active':''}" onclick="setTab('${d.id}')">${d.label} (${countFor(d.id)}명)</div>`).join('') +
