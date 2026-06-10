@@ -279,19 +279,20 @@ function setTab(id) { adminTab = id; renderAdmin(); }
 
 function renderAdminList() {
   const q = (document.getElementById('search-input')?.value || '').trim().toLowerCase();
-  let list = adminTab === 'all' ? signups : signups.filter(s => s.date === adminTab);
+  const tabLabel = adminTab === 'all' ? null : DATES.find(x => x.id === adminTab)?.label;
+  let list = adminTab === 'all' ? signups : signups.filter(s => s.date === tabLabel);
   if (q) list = list.filter(s => s.name.includes(q) || s.dept.toLowerCase().includes(q));
   const el = document.getElementById('admin-list');
   if (!list.length) { el.innerHTML = '<div class="empty-msg">신청자가 없습니다.</div>'; return; }
   el.innerHTML = list.map(s => {
-    const d = DATES.find(x => x.id === s.date);
+    const isA = s.date === DATES[0].label;
     return `<div class="list-item">
       <div class="avatar">${s.name.slice(-2)}</div>
       <div style="flex:1">
         <div style="font-weight:600;font-size:14px">${s.name}</div>
         <div style="font-size:12px;color:#888">${s.dept}</div>
       </div>
-      <span class="badge ${s.date==='A'?'badge-purple':'badge-teal'}">${d.label}</span>
+      <span class="badge ${isA?'badge-purple':'badge-teal'}">${s.date}</span>
     </div>`;
   }).join('');
 }
@@ -300,7 +301,7 @@ function exportExcel() {
   if (!window.XLSX) { alert('라이브러리 로딩 중입니다. 잠시 후 다시 시도해주세요.'); return; }
   const wb = XLSX.utils.book_new();
   DATES.forEach(d => {
-    const rows = signups.filter(s => s.date === d.id);
+    const rows = signups.filter(s => s.date === d.label);
     const data = [
       ['번호', '이름', '부서', '교육일', '시간'],
       ...rows.map((s, i) => [i+1, s.name, s.dept, d.label, d.time])
@@ -311,7 +312,7 @@ function exportExcel() {
   });
   const allData = [
     ['번호', '이름', '부서', '교육일', '시간'],
-    ...signups.map((s,i) => { const d = DATES.find(x=>x.id===s.date); return [i+1,s.name,s.dept,d.label,d.time]; })
+    ...signups.map((s,i) => [i+1, s.name, s.dept, s.date, '14:00 – 17:00 (3시간)'])
   ];
   const wsAll = XLSX.utils.aoa_to_sheet(allData);
   wsAll['!cols'] = [{wch:6},{wch:12},{wch:16},{wch:16},{wch:22}];
