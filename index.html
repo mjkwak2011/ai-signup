@@ -240,7 +240,7 @@ async function confirmSignup() {
   if (countFor(selectedDate) >= d.max) { alert('해당 날짜는 이미 마감되었습니다.'); return; }
   if (signups.find(s => s.name === name && s.dept === dept)) { alert('이미 신청하셨습니다.'); return; }
 
-  const ok = await insertSignup({ name, dept, date: selectedDate });
+  const ok = await insertSignup({ name, dept, date: d.label });
   if (!ok) { alert('오류가 발생했습니다. 다시 시도해주세요.'); return; }
 
   document.getElementById('success-msg').textContent = `${name}님 (${dept}) — ${d.label} ${d.time} 신청이 완료되었습니다.`;
