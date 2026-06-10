@@ -42,8 +42,6 @@
   .btn-outline:hover { background: #f5f5f7; }
   .btn-green { background: #1D9E75; color: #fff; }
   .btn-green:hover { background: #0f6e56; }
-
-  /* 팝업 */
   .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; align-items: center; justify-content: center; padding: 1rem; }
   .modal-overlay.open { display: flex; }
   .modal { background: #fff; border-radius: 20px; padding: 1.5rem; width: 100%; max-width: 360px; }
@@ -56,14 +54,10 @@
   .modal-warn { background: #fceaea; border-radius: 10px; padding: 10px 12px; margin-bottom: 1rem; font-size: 13px; color: #a32d2d; line-height: 1.5; }
   .modal-btns { display: flex; gap: 8px; }
   .modal-btns .btn { flex: 1; }
-
-  /* 성공 */
   .success-box { text-align: center; padding: 2.5rem 1rem; }
   .success-icon { font-size: 56px; margin-bottom: 1rem; }
   .success-box h2 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
   .success-box p { font-size: 14px; color: #666; margin-bottom: 1.5rem; line-height: 1.6; }
-
-  /* 관리자 */
   .nav-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
   .nav-title { font-size: 20px; font-weight: 600; }
   .link-btn { font-size: 13px; color: #534AB7; background: none; border: none; cursor: pointer; font-weight: 500; }
@@ -83,6 +77,7 @@
   .badge-purple { background: #f0effe; color: #3c3489; }
   .badge-teal { background: #e1f5ee; color: #0f6e56; }
   .empty-msg { text-align: center; padding: 2rem; font-size: 14px; color: #aaa; }
+  .loading { text-align: center; padding: 1rem; font-size: 14px; color: #aaa; }
 </style>
 </head>
 <body>
@@ -92,14 +87,13 @@
     <p>희망 일정을 선택하고 신청해주세요</p>
   </div>
 
-  <!-- 신청 페이지 -->
   <div id="page-signup" class="page active">
     <div style="display:flex;justify-content:flex-end;margin-bottom:0.75rem;">
       <button class="link-btn" onclick="showAdmin()">관리자 →</button>
     </div>
     <div class="card">
       <div class="section-label">일정 선택</div>
-      <div class="date-grid" id="date-grid"></div>
+      <div class="date-grid" id="date-grid"><div class="loading">로딩 중...</div></div>
     </div>
     <div class="card">
       <div class="section-label">신청 정보</div>
@@ -115,7 +109,6 @@
     </div>
   </div>
 
-  <!-- 완료 페이지 -->
   <div id="page-success" class="page">
     <div class="card success-box">
       <div class="success-icon">✅</div>
@@ -125,7 +118,6 @@
     </div>
   </div>
 
-  <!-- 관리자 페이지 -->
   <div id="page-admin" class="page">
     <div class="nav-row">
       <div class="nav-title">신청 현황</div>
@@ -137,13 +129,10 @@
     <div class="card" style="padding:0.5rem 1.25rem;margin-bottom:1rem;">
       <div id="admin-list"></div>
     </div>
-    <button class="btn btn-green" onclick="exportExcel()">
-      📊 엑셀로 내보내기 (.xlsx)
-    </button>
+    <button class="btn btn-green" onclick="exportExcel()">📊 엑셀로 내보내기 (.xlsx)</button>
   </div>
 </div>
 
-<!-- 확인 팝업 -->
 <div class="modal-overlay" id="modal">
   <div class="modal">
     <div class="modal-title">신청 전 확인해주세요</div>
@@ -154,9 +143,7 @@
       <div class="row"><span class="key">교육일</span><span class="val" id="m-date"></span></div>
       <div class="row"><span class="key">시간</span><span class="val" id="m-time"></span></div>
     </div>
-    <div class="modal-warn">
-      ⚠️ 신청 후 날짜 변경이 불가합니다. 변경이 필요할 경우 담당자에게 문의해주세요.
-    </div>
+    <div class="modal-warn">⚠️ 신청 후 날짜 변경이 불가합니다. 변경이 필요할 경우 담당자에게 문의해주세요.</div>
     <div class="modal-btns">
       <button class="btn btn-outline" onclick="closeModal()">취소</button>
       <button class="btn btn-primary" onclick="confirmSignup()">신청 확인</button>
@@ -165,20 +152,43 @@
 </div>
 
 <script>
+const SUPABASE_URL = 'https://kqhwlogddtsnfgqdhary.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxaHdsb2dkZHRzbmZncWRoYXJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwNDg5MjksImV4cCI6MjA5NjYyNDkyOX0.vHO1aZMsfC7GDutUO20Ib8AOhuIBchH8PnesfvIXZAA';
+
 const DATES = [
   { id: 'A', label: '6월 12일 (금)', time: '14:00 – 17:00 (3시간)', max: 22 },
   { id: 'B', label: '6월 16일 (화)', time: '14:00 – 17:00 (3시간)', max: 22 }
 ];
 
 let signups = [];
-try { signups = JSON.parse(localStorage.getItem('edu_signups') || '[]'); } catch(e) {}
 let selectedDate = null;
 let adminTab = 'A';
 
-function save() { try { localStorage.setItem('edu_signups', JSON.stringify(signups)); } catch(e) {} }
+async function fetchSignups() {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/signups?select=*`, {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+  });
+  signups = await res.json();
+}
+
+async function insertSignup(data) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/signups`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify(data)
+  });
+  return res.ok;
+}
+
 function countFor(id) { return signups.filter(s => s.date === id).length; }
 
-function renderDates() {
+async function renderDates() {
+  await fetchSignups();
   document.getElementById('date-grid').innerHTML = DATES.map(d => {
     const count = countFor(d.id);
     const full = count >= d.max;
@@ -219,19 +229,20 @@ function openModal() {
   document.getElementById('modal').classList.add('open');
 }
 
-function closeModal() {
-  document.getElementById('modal').classList.remove('open');
-}
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
 
-function confirmSignup() {
+async function confirmSignup() {
   const name = document.getElementById('input-name').value.trim();
   const dept = document.getElementById('input-dept').value.trim();
   const d = DATES.find(x => x.id === selectedDate);
   closeModal();
+
   if (countFor(selectedDate) >= d.max) { alert('해당 날짜는 이미 마감되었습니다.'); return; }
   if (signups.find(s => s.name === name && s.dept === dept)) { alert('이미 신청하셨습니다.'); return; }
-  signups.push({ name, dept, date: selectedDate, time: new Date().toLocaleString('ko-KR') });
-  save();
+
+  const ok = await insertSignup({ name, dept, date: selectedDate });
+  if (!ok) { alert('오류가 발생했습니다. 다시 시도해주세요.'); return; }
+
   document.getElementById('success-msg').textContent = `${name}님 (${dept}) — ${d.label} ${d.time} 신청이 완료되었습니다.`;
   document.getElementById('input-name').value = '';
   document.getElementById('input-dept').value = '';
@@ -246,9 +257,12 @@ function showPage(id) {
   if (id === 'page-admin') renderAdmin();
 }
 
-function showAdmin() { showPage('page-admin'); }
+async function showAdmin() {
+  showPage('page-admin');
+}
 
-function renderAdmin() {
+async function renderAdmin() {
+  await fetchSignups();
   const a = countFor('A'), b = countFor('B');
   document.getElementById('stat-grid').innerHTML = `
     <div class="stat-card"><div class="stat-val">${signups.length}</div><div class="stat-label">전체 신청</div></div>
@@ -288,19 +302,19 @@ function exportExcel() {
   DATES.forEach(d => {
     const rows = signups.filter(s => s.date === d.id);
     const data = [
-      ['번호', '이름', '부서', '교육일', '시간', '신청일시'],
-      ...rows.map((s, i) => [i+1, s.name, s.dept, d.label, d.time, s.time])
+      ['번호', '이름', '부서', '교육일', '시간'],
+      ...rows.map((s, i) => [i+1, s.name, s.dept, d.label, d.time])
     ];
     const ws = XLSX.utils.aoa_to_sheet(data);
-    ws['!cols'] = [{wch:6},{wch:12},{wch:16},{wch:16},{wch:22},{wch:22}];
+    ws['!cols'] = [{wch:6},{wch:12},{wch:16},{wch:16},{wch:22}];
     XLSX.utils.book_append_sheet(wb, ws, d.label.replace('월 ','월').replace('일 ','일'));
   });
   const allData = [
-    ['번호', '이름', '부서', '교육일', '시간', '신청일시'],
-    ...signups.map((s,i) => { const d = DATES.find(x=>x.id===s.date); return [i+1,s.name,s.dept,d.label,d.time,s.time]; })
+    ['번호', '이름', '부서', '교육일', '시간'],
+    ...signups.map((s,i) => { const d = DATES.find(x=>x.id===s.date); return [i+1,s.name,s.dept,d.label,d.time]; })
   ];
   const wsAll = XLSX.utils.aoa_to_sheet(allData);
-  wsAll['!cols'] = [{wch:6},{wch:12},{wch:16},{wch:16},{wch:22},{wch:22}];
+  wsAll['!cols'] = [{wch:6},{wch:12},{wch:16},{wch:16},{wch:22}];
   XLSX.utils.book_append_sheet(wb, wsAll, '전체');
   XLSX.writeFile(wb, '교육신청현황.xlsx');
 }
