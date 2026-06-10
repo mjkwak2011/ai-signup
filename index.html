@@ -16,7 +16,7 @@
   .page.active { display: block; }
   .card { background: #fff; border-radius: 16px; padding: 1.5rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
   .section-label { font-size: 12px; font-weight: 600; color: #888; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 0.75rem; }
-  .date-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1rem; }
+  .date-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 1rem; }
   .date-card { border: 1.5px solid #e0e0e0; border-radius: 12px; padding: 1rem; cursor: pointer; transition: all 0.15s; background: #fff; }
   .date-card:hover:not(.disabled) { border-color: #534AB7; background: #f4f3fe; }
   .date-card.selected { border: 2px solid #534AB7; background: #f0effe; }
@@ -61,7 +61,7 @@
   .nav-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
   .nav-title { font-size: 20px; font-weight: 600; }
   .link-btn { font-size: 13px; color: #534AB7; background: none; border: none; cursor: pointer; font-weight: 500; }
-  .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 1rem; }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 1rem; }
   .stat-card { background: #fff; border-radius: 12px; padding: 0.75rem; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
   .stat-val { font-size: 22px; font-weight: 700; color: #1a1a1a; }
   .stat-label { font-size: 11px; color: #888; margin-top: 2px; }
@@ -76,7 +76,7 @@
   .badge { font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 500; }
   .badge-purple { background: #f0effe; color: #3c3489; }
   .badge-teal { background: #e1f5ee; color: #0f6e56; }
-  .empty-msg { text-align: center; padding: 2rem; font-size: 14px; color: #aaa; }
+  .badge-orange { background: #FEF3E2; color: #B45309; }
   .loading { text-align: center; padding: 1rem; font-size: 14px; color: #aaa; }
 </style>
 </head>
@@ -156,8 +156,9 @@ const SUPABASE_URL = 'https://kqhwlogddtsnfgqdhary.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxaHdsb2dkZHRzbmZncWRoYXJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwNDg5MjksImV4cCI6MjA5NjYyNDkyOX0.vHO1aZMsfC7GDutUO20Ib8AOhuIBchH8PnesfvIXZAA';
 
 const DATES = [
-  { id: 'A', label: '6월 12일 (금)', time: '14:00 – 17:00 (3시간)', max: 22 },
-  { id: 'B', label: '6월 16일 (화)', time: '14:00 – 17:00 (3시간)', max: 22 }
+  { id: 'A', label: '6월 12일 (금)', time: '14:00 – 17:00 (3시간)', max: 20 },
+  { id: 'B', label: '6월 16일 (화)', time: '14:00 – 17:00 (3시간)', max: 18 },
+  { id: 'C', label: '6월 23일 (화)', time: '14:00 – 17:00 (3시간)', max: 20 }
 ];
 
 let signups = [];
@@ -266,8 +267,9 @@ async function renderAdmin() {
   const a = countFor('A'), b = countFor('B');
   document.getElementById('stat-grid').innerHTML = `
     <div class="stat-card"><div class="stat-val">${signups.length}</div><div class="stat-label">전체 신청</div></div>
-    <div class="stat-card"><div class="stat-val">${a}<span style="font-size:12px;color:#aaa"> / 22</span></div><div class="stat-label">6/12 (금)</div></div>
-    <div class="stat-card"><div class="stat-val">${b}<span style="font-size:12px;color:#aaa"> / 22</span></div><div class="stat-label">6/16 (화)</div></div>
+    <div class="stat-card"><div class="stat-val">${countFor('A')}<span style="font-size:12px;color:#aaa"> / 20</span></div><div class="stat-label">6/12 (금)</div></div>
+    <div class="stat-card"><div class="stat-val">${countFor('B')}<span style="font-size:12px;color:#aaa"> / 18</span></div><div class="stat-label">6/16 (화)</div></div>
+    <div class="stat-card"><div class="stat-val">${countFor('C')}<span style="font-size:12px;color:#aaa"> / 20</span></div><div class="stat-label">6/23 (화)</div></div>
   `;
   document.getElementById('admin-tabs').innerHTML =
     DATES.map(d => `<div class="tab ${adminTab===d.id?'active':''}" onclick="setTab('${d.id}')">${d.label} (${countFor(d.id)}명)</div>`).join('') +
@@ -286,13 +288,14 @@ function renderAdminList() {
   if (!list.length) { el.innerHTML = '<div class="empty-msg">신청자가 없습니다.</div>'; return; }
   el.innerHTML = list.map(s => {
     const isA = s.date === DATES[0].label;
+    const isB = s.date === DATES[1].label;
     return `<div class="list-item">
       <div class="avatar">${s.name.slice(-2)}</div>
       <div style="flex:1">
         <div style="font-weight:600;font-size:14px">${s.name}</div>
         <div style="font-size:12px;color:#888">${s.dept}</div>
       </div>
-      <span class="badge ${isA?'badge-purple':'badge-teal'}">${s.date}</span>
+      <span class="badge ${isA?'badge-purple':isB?'badge-teal':'badge-orange'}">${s.date}</span>
     </div>`;
   }).join('');
 }
