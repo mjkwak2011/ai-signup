@@ -185,7 +185,7 @@ async function insertSignup(data) {
   return res.ok;
 }
 
-function countFor(id) { return signups.filter(s => s.date === id).length; }
+function countFor(id) { const d = DATES.find(x => x.id === id); return signups.filter(s => s.date === d.label).length; }
 
 async function renderDates() {
   await fetchSignups();
